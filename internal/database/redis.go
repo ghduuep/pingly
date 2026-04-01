@@ -16,7 +16,10 @@ func InitRedis() *redis.Client {
 	var opts *redis.Options
 	var err error
 
-	opts, _ = redis.ParseURL(redisURL)
+	opts, err = redis.ParseURL(redisURL)
+	if err != nil {
+		log.Fatalf("Failed to parse Redis URL: %v", err)
+	}
 	rdb := redis.NewClient(opts)
 
 	_, err = rdb.Ping(context.Background()).Result()
