@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "github.com/ghduuep/pingly/docs"
 	"github.com/ghduuep/pingly/internal/api"
@@ -36,10 +41,8 @@ func main() {
 	}
 
 	db := database.InitDB()
-	defer db.Close()
 
 	rdb := database.InitRedis()
-	defer rdb.Close()
 
 	e := echo.New()
 
@@ -53,8 +56,31 @@ func main() {
 	api.SetupRotes(e, db, rdb)
 
 	port := ":8080"
-	log.Printf("API server is running on port %s", port)
-	if err := e.Start(port); err != nil {
+
+	go func() {
+		log.Printf("API server is running on port %s", port)
+		if err := e.Start(port); err != nil {
+			e.Logger.Fatal(err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
 		e.Logger.Fatal(err)
 	}
+
+	db.Close()
+
+	if err := rdb.Close(); err != nil {
+		e.Logger.Fatal(err)
+	}
+
+	log.Println("Server gracefully stopped.")
 }
