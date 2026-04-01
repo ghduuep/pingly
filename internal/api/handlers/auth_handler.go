@@ -111,8 +111,8 @@ func (h *Handler) Login(c echo.Context) error {
 
 func extractTokenString(c echo.Context) string {
 	authHeader := c.Request().Header.Get("Authorization")
-	if len(authHeader) > 7 && strings.ToUpper(authHeader[:7]) == "BEARER" {
-		return authHeader[7:]
+	if len(authHeader) > 7 && strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+		return strings.TrimSpace(authHeader[7:])
 	}
 	return ""
 }

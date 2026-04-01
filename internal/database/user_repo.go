@@ -45,7 +45,7 @@ func GetUserByID(ctx context.Context, db *pgxpool.Pool, id int) (models.User, er
 	var user models.User
 	err := db.QueryRow(ctx, query, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
-		return models.User{}, nil
+		return models.User{}, err
 	}
 	return user, nil
 }
