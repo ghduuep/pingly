@@ -73,7 +73,7 @@ func checkHTTP(ctx context.Context, m models.Monitor) models.CheckResult {
 	var resultValue string
 
 	if config.CheckSSL {
-		resultValue, status, message = checkSSL(resp, status, message)
+		resultValue, status, message = checkSSL(resp, status, message, config)
 	}
 
 	return models.CheckResult{
@@ -87,7 +87,7 @@ func checkHTTP(ctx context.Context, m models.Monitor) models.CheckResult {
 	}
 }
 
-func checkSSL(resp *http.Response, currentStatus models.MonitorStatus, currentMessage string) (string, models.MonitorStatus, string) {
+func checkSSL(resp *http.Response, currentStatus models.MonitorStatus, currentMessage string, config models.HTTPConfig) (string, models.MonitorStatus, string) {
 	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
 		return "", currentStatus, currentMessage
 	}
@@ -100,12 +100,22 @@ func checkSSL(resp *http.Response, currentStatus models.MonitorStatus, currentMe
 	status := currentStatus
 	message := currentMessage
 
+	alertThreshold := 30
+	if len(config.SSLAlertDays) > 0 {
+		alertThreshold = 0
+		for _, d := range config.SSLAlertDays {
+			if d > alertThreshold {
+				alertThreshold = d
+			}
+		}
+	}
+
 	if expiresIn < 0 {
 		status = models.StatusDown
 		message = fmt.Sprintf("CRITICAL: SSL certificate expired %s (%d days ago)", cert.NotAfter.Format("02/01/2006"), -days)
-	} else if days <= 30 {
+	} else if days <= alertThreshold {
 		status = models.StatusDegraded
-		message = fmt.Sprintf("SSl expires in %d days (%s)", days, cert.NotAfter.Format("02/01/2006"))
+		message = fmt.Sprintf("SSL expires in %d days (%s)", days, cert.NotAfter.Format("02/01/2006"))
 	}
 
 	return resultValue, status, message
