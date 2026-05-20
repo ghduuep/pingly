@@ -72,20 +72,8 @@ func checkHTTP(ctx context.Context, m models.Monitor) models.CheckResult {
 
 	var resultValue string
 
-	if config.CheckSSL && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
-		cert := resp.TLS.PeerCertificates[0]
-		expiresIn := time.Until(cert.NotAfter)
-		days := int(expiresIn.Hours() / 24)
-
-		resultValue = strconv.Itoa(days)
-
-		if expiresIn < 0 {
-			status = models.StatusDown
-			message = fmt.Sprintf("CRITICAL: SSL certificate expired %s (%d days ago)", cert.NotAfter.Format("02/01/2006"), -days)
-		} else if days <= 30 {
-			status = models.StatusDegraded
-			message = fmt.Sprintf("SSl expires in %d days (%s)", days, cert.NotAfter.Format("02/01/2006"))
-		}
+	if config.CheckSSL {
+		resultValue, status, message = checkSSL(resp, status, message)
 	}
 
 	return models.CheckResult{
@@ -97,4 +85,28 @@ func checkHTTP(ctx context.Context, m models.Monitor) models.CheckResult {
 		ResultValue: resultValue,
 		CheckedAt:   time.Now(),
 	}
+}
+
+func checkSSL(resp *http.Response, currentStatus models.MonitorStatus, currentMessage string) (string, models.MonitorStatus, string) {
+	if resp.TLS == nil || len(resp.TLS.PeerCertificates) == 0 {
+		return "", currentStatus, currentMessage
+	}
+
+	cert := resp.TLS.PeerCertificates[0]
+	expiresIn := time.Until(cert.NotAfter)
+	days := int(expiresIn.Hours() / 24)
+
+	resultValue := strconv.Itoa(days)
+	status := currentStatus
+	message := currentMessage
+
+	if expiresIn < 0 {
+		status = models.StatusDown
+		message = fmt.Sprintf("CRITICAL: SSL certificate expired %s (%d days ago)", cert.NotAfter.Format("02/01/2006"), -days)
+	} else if days <= 30 {
+		status = models.StatusDegraded
+		message = fmt.Sprintf("SSl expires in %d days (%s)", days, cert.NotAfter.Format("02/01/2006"))
+	}
+
+	return resultValue, status, message
 }
