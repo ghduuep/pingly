@@ -51,7 +51,7 @@ func checkPort(ctx context.Context, m models.Monitor) models.CheckResult {
 		Status:      models.StatusUp,
 		Latency:     latency,
 		ResultValue: fmt.Sprintf("%dms", latency),
-		Message:     "Port acessible (TCP handshake)",
+		Message:     "Port accessible (TCP handshake)",
 		CheckedAt:   time.Now(),
 	}
 }

@@ -44,6 +44,12 @@ func (m *MonitorManager) runWorker(ctx context.Context, mon models.Monitor) {
 				nextInterval = DownCheckInterval
 			}
 
+			const minSafeInterval = 10 * time.Second
+			if nextInterval < minSafeInterval {
+				log.Printf("[WARN] Monitor %d has dangerously low interval (%v). Forcing to %v", mon.ID, nextInterval, minSafeInterval)
+				nextInterval = minSafeInterval
+			}
+
 			timer.Reset(nextInterval)
 		}
 	}
