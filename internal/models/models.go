@@ -76,10 +76,12 @@ type CheckResult struct {
 type DNSConfig struct {
 	RecordType    string `json:"record_type"`
 	ExpectedValue string `json:"expected_value"`
+	NameServer    string `json:"name_server,omitempty"`
 }
 
 type HTTPConfig struct {
-	CheckSSL bool `json:"check_ssl"`
+	CheckSSL      bool  `json:"check_ssl"`
+	ExpectedCodes []int `json:"expected_codes,omitempty"`
 }
 
 type Incident struct {

@@ -50,7 +50,7 @@ func (m *MonitorManager) runWorker(ctx context.Context, mon models.Monitor) {
 }
 
 func (m *MonitorManager) processCheck(ctx context.Context, mon *models.Monitor) (models.MonitorStatus, bool) {
-	result := performCheck(*mon)
+	result := performCheck(ctx, *mon)
 
 	m.handleDNSLearning(ctx, mon, &result)
 
@@ -79,14 +79,14 @@ func (m *MonitorManager) processCheck(ctx context.Context, mon *models.Monitor) 
 	return result.Status, isDownOrDegraded
 }
 
-func performCheck(m models.Monitor) models.CheckResult {
+func performCheck(ctx context.Context, m models.Monitor) models.CheckResult {
 	switch m.Type {
 	case models.TypeHTTP:
-		return checkHTTP(m)
+		return checkHTTP(ctx, m)
 	case models.TypeDNS:
-		return checkDNS(m)
+		return checkDNS(ctx, m)
 	case models.TypePort:
-		return checkPort(m)
+		return checkPort(ctx, m)
 	default:
 		return models.CheckResult{
 			MonitorID: m.ID,

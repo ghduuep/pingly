@@ -149,13 +149,13 @@ func UpdateMonitor(ctx context.Context, db *pgxpool.Pool, monitorID int, userID 
 
 	if req.Interval != nil {
 		setParts = append(setParts, fmt.Sprintf("interval = $%d", argID))
-		args = append(args, *req.Interval)
+		args = append(args, interval)
 		argID++
 	}
 
 	if req.Timeout != nil {
 		setParts = append(setParts, fmt.Sprintf("timeout = $%d", argID))
-		args = append(args, *req.Timeout)
+		args = append(args, timeout)
 		argID++
 	}
 

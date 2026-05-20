@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 	"github.com/ghduuep/pingly/internal/models"
 )
 
-func checkHTTP(m models.Monitor) models.CheckResult {
+func checkHTTP(ctx context.Context, m models.Monitor) models.CheckResult {
 	var config models.HTTPConfig
 	if len(m.Config) > 0 {
 		_ = json.Unmarshal(m.Config, &config)
@@ -23,7 +24,18 @@ func checkHTTP(m models.Monitor) models.CheckResult {
 
 	start := time.Now()
 
-	resp, err := client.Get(m.Target)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.Target, nil)
+	if err != nil {
+		return models.CheckResult{
+			MonitorID: m.ID,
+			Status:    models.StatusDown,
+			Latency:   0,
+			Message:   "Failed to create request: " + err.Error(),
+			CheckedAt: time.Now(),
+		}
+	}
+
+	resp, err := client.Do(req)
 	latency := time.Since(start).Milliseconds()
 
 	if err != nil {
@@ -45,8 +57,17 @@ func checkHTTP(m models.Monitor) models.CheckResult {
 
 	message := resp.Status
 	status := models.StatusDown
-	if resp.StatusCode >= 200 && resp.StatusCode < 500 {
-		status = models.StatusUp
+	if len(config.ExpectedCodes) > 0 {
+		for _, code := range config.ExpectedCodes {
+			if resp.StatusCode == code {
+				status = models.StatusUp
+				break
+			}
+		}
+	} else {
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			status = models.StatusUp
+		}
 	}
 
 	var resultValue string

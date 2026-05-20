@@ -12,23 +12,34 @@ import (
 	"github.com/ghduuep/pingly/internal/models"
 )
 
-func checkDNS(m models.Monitor) models.CheckResult {
+func checkDNS(parentCtx context.Context, m models.Monitor) models.CheckResult {
 	var config models.DNSConfig
 	if err := json.Unmarshal(m.Config, &config); err != nil {
 		return models.CheckResult{Status: models.StatusDown, Message: "[ERROR] DNS configuration error.", CheckedAt: time.Now()}
 	}
 
-	r := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: m.Timeout,
-			}
-			return d.DialContext(ctx, network, "8.8.8.8:53")
-		},
+	var r *net.Resolver
+
+	if config.NameServer != "" {
+		r = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: m.Timeout,
+				}
+
+				ns := config.NameServer
+				if !strings.Contains(ns, ":") {
+					ns = ns + ":53"
+				}
+				return d.DialContext(ctx, network, ns)
+			},
+		}
+	} else {
+		r = net.DefaultResolver
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.Timeout)
+	ctx, cancel := context.WithTimeout(parentCtx, m.Timeout)
 	defer cancel()
 
 	var resultString string

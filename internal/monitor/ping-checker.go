@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 	"github.com/ghduuep/pingly/internal/models"
 	"net"
@@ -8,16 +9,19 @@ import (
 	"time"
 )
 
-func checkPort(m models.Monitor) models.CheckResult {
+func checkPort(ctx context.Context, m models.Monitor) models.CheckResult {
 	target := m.Target
 	if !strings.Contains(target, ":") {
 		target = fmt.Sprintf("%s:443", target)
 	}
 
-	timeout := m.Timeout
 	start := time.Now()
 
-	conn, err := net.DialTimeout("tcp", target, timeout)
+	dialer := net.Dialer{
+		Timeout: m.Timeout,
+	}
+
+	conn, err := dialer.DialContext(ctx, "tcp", target)
 
 	latency := time.Since(start).Milliseconds()
 
