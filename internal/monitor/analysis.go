@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -88,9 +89,18 @@ func (m *MonitorManager) handleSSLAlerts(ctx context.Context, mon *models.Monito
 		return
 	}
 
+	thresholds := config.SSLAlertDays
+	if len(thresholds) == 0 {
+		thresholds = []int{30, 14, 7}
+	}
+
+	sort.Slice(thresholds, func(i, j int) bool {
+		return thresholds[i] > thresholds[j]
+	})
+
 	redisKey := fmt.Sprintf("monitor:%d:ssl_last_threshold", mon.ID)
 
-	if daysRemaining > 30 {
+	if len(thresholds) > 0 && daysRemaining > thresholds[0] {
 		m.redis.Del(ctx, redisKey)
 		return
 	}
@@ -104,7 +114,6 @@ func (m *MonitorManager) handleSSLAlerts(ctx context.Context, mon *models.Monito
 		return
 	}
 
-	thresholds := []int{30, 14, 7}
 	shouldAlert := false
 	currentMatchedThreshold := 0
 

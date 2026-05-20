@@ -81,6 +81,7 @@ type DNSConfig struct {
 
 type HTTPConfig struct {
 	CheckSSL      bool  `json:"check_ssl"`
+	SSLAlertDays  []int `json:"ssl_alert_days,omitempty"`
 	ExpectedCodes []int `json:"expected_codes,omitempty"`
 }
 
